@@ -1,0 +1,23 @@
+akshare
+baostock
+pandas
+tqdm
+pyecharts
+schedule
+streamlit
+streamlit-echarts
+tabulate
+loguru
+pathos
+dask[complete]
+scikit-learn
+matplotlib
+fastapi
+uvicorn
+pymongo
+ruff
+ray
+finta
+# pandas-ta
+pandas_ta==0.3.14b0
+lightgbm

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        .my_btn {
+            margin-left: 10%;
+            margin-right: 5%;
+            width: 35%;
+            opacity: 0.85;
+        }
+
+        .align-right {
+            align-items: right;
+            text-align: right;
+            opacity: 0.9;
+            float: right;
+            position: relative;
+        }
+
+        .my_span {
+            margin-right: 3%;
+        }
+    </style>
+</head>
+
+<body style="height: 90%; margin-left: 5%;margin-right: 5%;margin-top: 1%">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts-stat/dist/ecStat.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/extension/dataTool.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/map/js/china.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/map/js/world.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/extension/bmap.min.js"></script>
+
+    <div class="input-group input-group-lg">
+        <span class="input-group-text">id</span>
+        <input type="text" class="form-control" value="rose" aria-label="user_id" id="user_id">
+        <span class="input-group-text">code</span>
+        <input type="text" class="form-control" value="sz.399006" aria-label="code" id="code">
+        <span class="input-group-text">start</span>
+        <input type="text" class="form-control" value="22-01-01" aria-label="start_date" id="start_date">
+        <span class="input-group-text">end</span>
+        <input type="text" class="form-control" value="25-06-20" aria-label="end_date" id="end_date">
+        <span class="input-group-text">at</span>
+        <input type="text" class="form-control" value=60 aria-label="k_count" id="k_count">
+    </div>
+    <div class="input-group input-group-lg" style="width:100%">
+
+        <div style="width:50%">
+            <span>CurP:</span>
+            <span id="cur_profit_rate" class="my_span">0.0</span>
+            <span>TotolP:</span>
+            <span id="your_profit" class="my_span">0.0</span>
+            <span>StockP:</span>
+            <span id="stock_profit_rate" class="my_span">0.0</span>
+        </div>
+
+        <div class="align-right" style="width:50%">
+            <button type="button" class="btn btn-success " onclick="get_data()">GO</button>
+            <button type="button" class="btn btn-success  " onclick="push_records()" id="push">SAVE</button>
+            <button type="button" class="btn btn-success  " onclick="get_records()" id="history">RECORDS</button>
+        </div>
+    </div>
+
+
+
+
+    <!--    <p id="profit" class="text-xl-start fs-5">-->
+    <!--       -->
+    <!--    </p>-->
+
+    <div id="container" style="height: 90%;"></div>
+    <div class="input-group input-group-lg" style="width: 100%;height: 8%;">
+        <button type="button" class="btn btn-success my_btn " onclick="buy_or_sell()" id="opt">buy</button>
+        <button type="button" class="btn btn-warning my_btn" onclick="show_next()" id="next">next</button>
+    </div>
+    <script type="text/javascript">
+        var chartDom = document.getElementById('container');
+        var myChart = echarts.init(chartDom);
+        var server_data;
+        var total_data;
+        var total_macd;
+        var total_records = [];
+        var start_price;
+        var total_profit;
+        var base_url = window.location.protocol + "//" + window.location.host;
+
+        function show_next() {
+            k_count = document.getElementById("k_count").value;
+            if (k_count == total_data["values"].length) {
+                alert("已经是最后一天了")
+                return false;
+            }
+
+            k_count = parseInt(k_count) + 1;
+            document.getElementById("k_count").value = k_count;
+            var opt = document.getElementById("opt").innerHTML;
+            initKCharts(false);
+            var cur_price = myChart.getOption().series[0].data[myChart.getOption().series[0].data.length - 1][1];
+            if (opt == "buy") {
+                document.getElementById("cur_profit_rate").innerHTML = 0;
+                console.log("current empty")
+            } else {
+                var buy_price = total_records[total_records.length - 1].price;
+                var last_day_price = myChart.getOption().series[0].data[myChart.getOption().series[0].data.length - 2][1];
+                var origin_profit_rate = document.getElementById("your_profit").innerHTML;
+                var cur_profit_rate = (cur_price / buy_price - 1).toFixed(2);
+                var last_day_profite = (cur_price / last_day_price);
+                document.getElementById("cur_profit_rate").innerHTML = cur_profit_rate;
+                total_profit = (parseFloat(origin_profit_rate) + 1) * last_day_profite - 1;
+                document.getElementById("your_profit").innerHTML = total_profit.toFixed(2);
+            }
+            document.getElementById("stock_profit_rate").innerHTML = (cur_price / start_price - 1).toFixed(2);
+            return true;
+        }
+
+        function buy_or_sell() {
+            opt = document.getElementById("opt").innerHTML;
+            console.log(myChart.getOption().series[0].data[myChart.getOption().series[0].data.length - 1])
+            cur_price = myChart.getOption().series[0].data[myChart.getOption().series[0].data.length - 1][1];
+            record = {
+                "opt": document.getElementById("opt").innerHTML,
+                "price": cur_price,
+                "date": myChart.getOption().xAxis[0].data[myChart.getOption().xAxis[0].data.length - 1],
+            };
+            total_records.push(record);
+            if (opt == "buy") {
+                document.getElementById("opt").innerHTML = "sell";
+            } else {
+                document.getElementById("opt").innerHTML = "buy";
+            };
+            if (show_next()) {
+                add_point(record);
+            }
+        }
+
+
+        function add_point(record) {
+            //给k线图加上markpoints
+            var opt = record.opt;
+            color = "red"
+            if (opt == "sell") {
+                color = "green"
+            }
+            var option = myChart.getOption();
+            var markPoints = option.series[0].markPoint == undefined ? [] : option.series[0].markPoint.data;
+
+
+            markPoints.push({
+                coord: [record.date, record.price],
+                value: opt.slice(0, 1),
+                itemStyle: {
+                    color: color
+                }
+            });
+            option.series[0].markPoint = {
+                data: markPoints
+            };
+            myChart.setOption(option);
+        }
+
+        function get_records() {
+            window.location.href = base_url + "/hist";
+        }
+
+        function get_data() {
+            //清空之前的全局变量
+            total_records = [];
+            total_profit = 0;
+            document.getElementById("your_profit").innerHTML = 0;
+            document.getElementById("cur_profit_rate").innerHTML = 0;
+            document.getElementById("stock_profit_rate").innerHTML = 0;
+            // document.getElementById("k_count").value = 30;
+            document.getElementById("opt").value = "buy";
+
+            var url = base_url + "/stock_data"
+            code = document.getElementById("code").value;
+            start_date = document.getElementById("start_date").value;
+            end_date = document.getElementById("end_date").value;
+            var request = new XMLHttpRequest();
+            request.open("post", url);/*设置请求方法与路径*/
+            request.setRequestHeader('Content-Type', 'application/json')
+            request.send(JSON.stringify({
+                "code": code,
+                "start_date": "20" + start_date,
+                "end_date": "20" + end_date,
+                "frequency": "d"
+            }));
+            request.onload = function () {/*XHR对象获取到返回信息后执行*/
+                if (request.status == 200) {/*返回状态为200，即为数据获取成功*/
+                    server_data = JSON.parse(request.responseText);
+                    // document.getElementById("container").innerHTML = json;
+                    //data = json前30个数据
+                    total_data = splitData(server_data["base_data"]);
+                    // total_macd = calcMACD(12, 26, 9, total_data.values, 1);
+                    total_macd = { "macd": server_data["macd"], "dif": server_data["diff"], "dea": server_data["dea"] }
+                    initKCharts(true);
+                    start_price = myChart.getOption().series[0].data[myChart.getOption().series[0].data.length - 1][1];
+                }
+            };
+
+
+        }
+        function push_records() {
+            //提交的时候如果有持仓先sell
+            opt = document.getElementById("opt").innerHTML;
+            if (opt == "sell") {
+                buy_or_sell();
+            }
+            //提交到后端
+
+            var url = base_url + "/push_records"
+            var request = new XMLHttpRequest();
+            request.open("post", url);/*设置请求方法与路径*/
+            request.setRequestHeader('Content-Type', 'application/json')
+            user_id = document.getElementById("user_id").value;
+            stock_code = document.getElementById("code").value;
+            stock_profit_rate = document.getElementById("stock_profit_rate").innerHTML;
+            your_profit = document.getElementById("your_profit").innerHTML;
+            request.send(JSON.stringify({ "records": total_records, "user_id": user_id, "stock_code": stock_code, "stock_profit_rate": stock_profit_rate, "your_profit": your_profit }));
+            request.onload = function () {/*XHR对象获取到返回信息后执行*/
+                if (request.status == 200) {/*返回状态为200，即为数据获取成功*/
+                    var json = JSON.parse(request.responseText);
+                    alert(json);
+                }
+            };
+        }
+
+
+        function splitData(rawData) {
+            let categoryData = [];
+            let values = [];
+            let volumes = [];
+            for (let i = 0; i < rawData.length; i++) {
+                categoryData.push(rawData[i].splice(0, 1)[0]);
+                values.push(rawData[i]);
+                volumes.push([i, rawData[i][4], rawData[i][0] > rawData[i][1] ? 1 : -1]);
+            }
+            return {
+                categoryData: categoryData,
+                values: values,
+                volumes: volumes
+            };
+        }
+
+        function initKCharts(is_new) {
+            var option = myChart.getOption() == undefined ? {} : myChart.getOption();
+            var markPoints;
+            if (is_new) {
+                markPoints = []
+            } else {
+                if (myChart.getOption() == undefined) {
+                    markPoints = []
+                } else {
+                    markPoints = option.series[0].markPoint.data;
+                }
+            }
+
+            var upColor = "#F9293E";//涨颜色
+            var downColor = "#00aa3b";//跌颜色
+            var k_count = document.getElementById("k_count").value;
+            var start = myChart.getOption() == undefined ? 0 : myChart.getOption().dataZoom[0].start;
+            var data = {
+                categoryData: total_data.categoryData.slice(0, k_count),
+                values: total_data.values.slice(0, k_count),
+                volumes: total_data.volumes.slice(0, k_count),
+                ma5: server_data.ma5.slice(0, k_count),
+                ma10: server_data.ma10.slice(0, k_count),
+                ma20: server_data.ma20.slice(0, k_count),
+                ma30: server_data.ma30.slice(0, k_count),
+                ma60: server_data.ma60.slice(0, k_count),
+
+            };
+            var macd = {
+                dif: total_macd.dif.slice(0, k_count),
+                dea: total_macd.dea.slice(0, k_count),
+                macd: total_macd.macd.slice(0, k_count)
+            };
+
+            myChart.setOption(
+                (option = {
+                    animation: false,
+                    // legend: {
+                    //     bottom: 10,
+                    //     left: 'center',
+                    //     data: ['Dow-Jones index', 'MA5', 'MA10', 'MA20', 'MA30']
+                    // },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross'
+                        },
+                        borderWidth: 1,
+                        borderColor: '#ccc',
+                        padding: 10,
+                        textStyle: {
+                            color: '#000'
+                        },
+                        position: function (pos, params, el, elRect, size) {
+                            const obj = {
+                                top: 10
+                            };
+                            obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
+                            return obj;
+                        }
+                        // extraCssText: 'width: 170px'
+                    },
+                    axisPointer: {
+                        link: [
+                            {
+                                xAxisIndex: 'all'
+                            }
+                        ],
+                        label: {
+                            backgroundColor: '#777'
+                        }
+                    },
+                    toolbox: {
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: false
+                            },
+                            brush: {
+                                type: ['lineX', 'clear']
+                            }
+                        }
+                    },
+                    brush: {
+                        xAxisIndex: 'all',
+                        brushLink: 'all',
+                        outOfBrush: {
+                            colorAlpha: 0.1
+                        }
+                    },
+                    visualMap: {
+                        show: false,
+                        seriesIndex: 6,
+                        dimension: 2,
+                        pieces: [
+                            {
+                                value: 1,
+                                color: downColor
+                            },
+                            {
+                                value: -1,
+                                color: upColor
+                            }
+                        ]
+                    },
+                    grid: [
+                        {
+                            left: '10%',
+                            right: '8%',
+                            height: '50%'
+                        },
+                        {
+                            left: '10%',
+                            right: '8%',
+                            top: '60%',
+                            height: '20%'
+                        }, {
+                            left: '10%',
+                            right: '8%',
+                            top: '80%', //MACD 指标
+                            height: '23%'
+                        }
+                    ],
+                    xAxis: [
+                        {
+                            type: 'category',
+                            data: data.categoryData,
+                            boundaryGap: false,
+                            axisLine: { onZero: false },
+                            splitLine: { show: false },
+                            min: 'dataMin',
+                            max: 'dataMax',
+                            axisPointer: {
+                                z: 100
+                            }
+                        },
+                        {
+                            type: 'category',
+                            gridIndex: 1,
+                            data: data.categoryData,
+                            boundaryGap: false,
+                            axisLine: { onZero: false },
+                            axisTick: { show: false },
+                            splitLine: { show: false },
+                            axisLabel: { show: false },
+                            min: 'dataMin',
+                            max: 'dataMax'
+                        }, { //幅图
+                            type: 'category',
+                            gridIndex: 2,
+                            data: data.categoryData,
+                            axisLabel: {
+                                show: false
+                            }
+                        }
+                    ],
+                    yAxis: [
+                        {
+                            scale: true,
+                            splitArea: {
+                                show: true
+                            }
+                        },
+                        {
+                            scale: true,
+                            gridIndex: 1,
+                            splitNumber: 2,
+                            axisLabel: { show: false },
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            splitLine: { show: false }
+                        }, { //幅图
+                            z: 4, gridIndex: 2, splitNumber: 4,
+                            axisLine: {
+                                onZero: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            splitLine: {
+                                show: false
+                            },
+                            axisLabel: { //label文字设置
+                                color: '#c7c7c7',
+                                inside: true, //label文字朝内对齐
+                                fontSize: 8
+                            },
+                        }
+                    ],
+                    dataZoom: [
+                        {
+                            type: 'inside',
+                            xAxisIndex: [0, 1, 2],
+                            start: start,
+                            end: 100
+                        },
+                        {
+                            show: false,
+                            xAxisIndex: [0, 1, 2],
+                            type: 'slider',
+                            top: '85%',
+                            start: start,
+                            end: 100
+                        }
+                    ],
+                    series: [
+                        {
+                            name: 'Dow-Jones index',
+                            type: 'candlestick',
+                            data: data.values,
+                            itemStyle: {
+                                color: upColor,
+                                color0: downColor,
+                                borderColor: upColor,
+                                borderColor0: downColor
+                            },
+                            markPoint: {
+                                data: markPoints
+                            },
+                            tooltip: {
+                                formatter: function (param) {
+                                    param = param[0];
+                                    return [
+                                        'Date: ' + param.name + '<hr size=1 style="margin: 3px 0">',
+                                        'Open: ' + param.data[0] + '<br/>',
+                                        'Close: ' + param.data[1] + '<br/>',
+                                        'Lowest: ' + param.data[2] + '<br/>',
+                                        'Highest: ' + param.data[3] + '<br/>'
+                                    ].join('');
+                                }
+                            }
+                        },
+                        {
+                            name: 'MA5',
+                            type: 'line',
+                            data: data.ma5,
+                            smooth: true,
+                            symbol: "none", //隐藏选中时有小圆点
+                            lineStyle: {
+                                opacity: 0.5
+                            }
+                        },
+                        {
+                            name: 'MA10',
+                            type: 'line',
+                            data: data.ma10,
+                            smooth: true,
+                            symbol: "none", //隐藏选中时有小圆点
+
+                            lineStyle: {
+                                opacity: 0.5
+                            }
+                        },
+                        {
+                            name: 'MA20',
+                            type: 'line',
+                            data: data.ma20,
+                            smooth: true,
+                            symbol: "none", //隐藏选中时有小圆点
+                            lineStyle: {
+                                opacity: 0.5
+                            }
+                        },
+                        {
+                            name: 'MA30',
+                            type: 'line',
+                            data: data.ma30,
+                            smooth: true,
+                            symbol: "none", //隐藏选中时有小圆点
+                            lineStyle: {
+                                opacity: 0.5
+                            }
+                        },
+                        {
+                            name: 'MA60',
+                            type: 'line',
+                            data: data.ma60,
+                            smooth: true,
+                            symbol: "none", //隐藏选中时有小圆点
+                            lineStyle: {
+                                opacity: 0.5
+                            }
+                        },
+                        {
+                            name: 'Volume',
+                            type: 'bar',
+                            xAxisIndex: 1,
+                            yAxisIndex: 1,
+                            data: data.volumes
+                        }, {
+                            name: 'MACD',
+                            type: 'bar',
+                            xAxisIndex: 2,
+                            yAxisIndex: 2,
+                            data: macd.macd,
+                            barWidth: '40%',
+                            itemStyle: {
+                                normal: {
+                                    color: function (params) {
+                                        var colorList;
+                                        if (params.data >= 0) {
+                                            colorList = upColor;
+                                        } else {
+                                            colorList = downColor;
+                                        }
+                                        return colorList;
+                                    },
+                                }
+                            }
+                        }, {
+                            name: 'DIF',
+                            type: 'line',
+                            symbol: "none",
+                            xAxisIndex: 2,
+                            yAxisIndex: 2,
+                            data: macd.dif,
+                            lineStyle: {
+                                normal: {
+                                    color: '#da6ee8',
+                                    width: 1
+                                }
+                            }
+                        }, {
+                            name: 'DEA',
+                            type: 'line',
+                            symbol: "none",
+                            xAxisIndex: 2,
+                            yAxisIndex: 2,
+                            data: macd.dea,
+                            lineStyle: {
+                                normal: {
+                                    opacity: 0.8,
+                                    color: '#39afe6',
+                                    width: 1
+                                }
+                            }
+                        }
+                    ]
+                }),
+                true
+            );
+            option && myChart.setOption(option);
+        }
+        window.onload = get_data;
+    </script>
+
+
+
+</body>
+
+</html>
