@@ -7,7 +7,7 @@ base_dir="$( cd "$script_dir/" && pwd )"
 echo "base_dir: $base_dir"
 cd $base_dir
 
-jobDir="${base_dir}/stock_quant"
+jobDir="${base_dir}"
 echo "jobDir: $jobDir"
 pythonPath=${base_dir}/venv/bin/python
 
