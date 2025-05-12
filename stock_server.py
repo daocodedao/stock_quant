@@ -26,13 +26,26 @@ def get_stock_info(stock_code):
             return None
         data_list = rs.get_data()
         if not data_list.empty:
-            # 获取市值信息
-            rs_profit = bs.query_profit_data(code=stock_code, year=2023, quarter=4)
+            # 获取股票最新交易日数据
+            rs_latest = bs.query_history_k_data_plus(queryCode,
+                "date,close",
+                start_date=None,
+                end_date=None,
+                frequency="d", 
+                adjustflag="3")
+            
             market_cap = 0
-            if rs_profit.error_code == '0':
-                profit_data = rs_profit.get_data()
-                if not profit_data.empty:
-                    market_cap = float(profit_data['totalShare'].iloc[0]) * float(profit_data['marketValue'].iloc[0])
+            if rs_latest.error_code == '0':
+                latest_data = rs_latest.get_data()
+                if not latest_data.empty:
+                    latest_close = float(latest_data['close'].iloc[-1])  # 获取最新收盘价
+                    # 获取总股本
+                    rs_profit = bs.query_profit_data(code=queryCode, year=2023, quarter=4)
+                    if rs_profit.error_code == '0':
+                        profit_data = rs_profit.get_data()
+                        if not profit_data.empty:
+                            total_shares = float(profit_data['totalShare'].iloc[0])
+                            market_cap = latest_close * total_shares
             
             return {
                 'code': stock_code,
