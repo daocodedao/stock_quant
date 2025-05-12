@@ -11,7 +11,8 @@ system = platform.system()
 if system == 'Darwin':  # macOS
     plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 elif system == 'Linux':  # Ubuntu
-    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    # Ubuntu 18 中文字体设置
+    plt.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Micro Hei', 'DejaVu Sans']
     
 plt.rcParams['axes.unicode_minus'] = False
 
