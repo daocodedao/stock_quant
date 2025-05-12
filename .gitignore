@@ -153,3 +153,6 @@ nohup.out
 
 poetry.lock
 .ruff_cache/
+out/
+static/
+stock_data_cache/
