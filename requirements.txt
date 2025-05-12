@@ -23,6 +23,6 @@ pandas_ta==0.3.14b0
 lightgbm
 backtrader
 mini-racer
-zipline
+# zipline
 qstock
 flask
