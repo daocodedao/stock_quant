@@ -191,6 +191,50 @@ def dividend_analysis_main(stock_code='600755'):
     # 准备CSV数据
     csv_data = []
     
+    # 获取当前年份
+    current_year = datetime.now().year
+    next_year = current_year + 1
+    
+    # 确保包含当前年份和下一年度的数据
+    for year in [current_year, next_year]:
+        year_data = {
+            '报告期': pd.to_datetime(f"{year}-12-31"),
+            '分红方案(元/股)': None,
+            '股息率(%)': None,
+            '年内最高价': None,
+            '年内最高价日期': None,
+            '年内最低价': None,
+            '年内最低价日期': None,
+            '公告日期': None,
+            '股权登记日': None,
+            '除权除息日': None,
+            '公告日期_最高价': None,
+            '公告日期_最高价日期': None,
+            '公告日期_最低价': None,
+            '公告日期_最低价日期': None,
+            '股权登记日_最高价': None,
+            '股权登记日_最高价日期': None,
+            '股权登记日_最低价': None,
+            '股权登记日_最低价日期': None,
+            '除权除息日_最高价': None,
+            '除权除息日_最高价日期': None,
+            '除权除息日_最低价': None,
+            '除权除息日_最低价日期': None
+        }
+        
+        # 获取年度价格范围
+        year_price_range = get_year_price_range(stock_data, f"{year}-12-31")
+        if year_price_range:
+            year_data.update({
+                '年内最高价': year_price_range['年内最高价'],
+                '年内最高价日期': year_price_range['年内最高价日期'],
+                '年内最低价': year_price_range['年内最低价'],
+                '年内最低价日期': year_price_range['年内最低价日期']
+            })
+            
+        # 将年度数据存储到临时字典中
+        temp_data_dict = {pd.to_datetime(year_data['报告期']).year: year_data}
+    
     # 分析每个重要日期前后的价格变动
     for _, row in dividend_data.iterrows():
         report_period = row['报告期']
@@ -251,10 +295,21 @@ def dividend_analysis_main(stock_code='600755'):
                 })
         
         csv_data.append(record)
+        # 从临时字典中移除已有的年份数据
+        report_year = pd.to_datetime(record['报告期']).year
+        if report_year in temp_data_dict:
+            del temp_data_dict[report_year]
+    
+    # 添加剩余的年份数据（当前年份和下一年度，如果它们还没有出现在分红数据中）
+    for year_data in temp_data_dict.values():
+        csv_data.append(year_data)
     
     # 将结果保存为CSV文件
     if csv_data:
         df = pd.DataFrame(csv_data)
+        # 按报告期排序
+        df['报告期'] = pd.to_datetime(df['报告期'])
+        df = df.sort_values('报告期')
         saveFilePath = f'out/dividend_analysis_result_{stock_code}.csv'
         df.to_csv(saveFilePath, index=False, encoding='utf-8-sig')
         print(f"分析结果已保存到 {saveFilePath}")
