@@ -12,6 +12,7 @@ if system == 'Darwin':  # macOS
     plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 elif system == 'Linux':  # Ubuntu
     plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    
 plt.rcParams['axes.unicode_minus'] = False
 
 # 创建缓存目录
