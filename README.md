@@ -90,14 +90,22 @@ python GetBaseData/get_board_data.py
 streamlit run StrategyLib/ChanStrategy/automatic_drawing.py
 ```
 
-### 4.0 Contributing
+### frp
+```
+cat /data/work/frp/frpc.ini 
+vim /data/work/frp/frpc.ini
 
-1. Fork it (<https://github.com/PKQ1688/stock_quant/fork>)
-2. Study how it's implemented.
-3. Create your feature branch (`git checkout -b my-new-feature`).
-4. Run [black](https://github.com/ambv/black) code formatter on the finta.py to ensure uniform code style.
-5. Commit your changes (`git commit -am 'Add some feature'`).
-6. Push to the branch (`git push origin my-new-feature`).
-7. Create a new Pull Request.
 
-------------------------------------------------------------------------
+[ssh-stockquant5000]
+type = tcp
+local_ip = 127.0.0.1
+local_port = 5000
+remote_port = 5000
+use_encryption = false
+use_compression = false
+
+# 重启frp
+sudo systemctl restart  supervisor
+sudo supervisorctl reload
+sudo supervisord
+```

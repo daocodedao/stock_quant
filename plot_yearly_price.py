@@ -4,9 +4,14 @@ import numpy as np
 from datetime import datetime
 from pathlib import Path
 from Utils.dataUtil import get_stock_data
+import platform
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # macOS系统使用
+# 根据操作系统设置中文字体
+system = platform.system()
+if system == 'Darwin':  # macOS
+    plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+elif system == 'Linux':  # Ubuntu
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
 # 创建缓存目录
